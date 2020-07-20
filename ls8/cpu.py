@@ -7,7 +7,9 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.pc = 0
+        self.ram = [0] * 256
+        self.reg = [0] * 8
 
     def load(self):
         """Load a program into memory."""
@@ -59,7 +61,48 @@ class CPU:
             print(" %02X" % self.reg[i], end='')
 
         print()
+    
+    def ram_read(self, address):
+        if address >= len(self.ram) or address < 0:
+            print(f"Address out of range of ram")
+        else:
+            if self.ram[address]:
+                return self.ram[address]
+            else:
+                return f"Nothing found at ram[{address}]"
+
+    def ram_write(self, address, value):
+        if address >= len(self.ram) or address < 0:
+            return f"Address out of range of ram"
+        else:
+            self.ram[address] = value
 
     def run(self):
         """Run the CPU."""
-        pass
+        running = True
+        while running:
+            if self.pc < len(self.ram):
+                inst = self.ram[self.pc]
+                if inst == 0b00000001: # HLT
+                    break
+                elif inst == 0b10000010: # LDI
+                    reg_num = self.ram[self.pc + 1]
+                    value = self.ram[self.pc + 2]
+                    self.reg[reg_num] = value
+                    self.pc += 3
+                    #Original way (less clean): self.reg[self.ram[self.pc + 1]] = self.ram[self.pc+2]
+                elif inst == 0b01000111:
+                    reg_val = self.ram[self.pc + 1]
+                    print(self.reg[reg_val])
+                    self.pc += 2
+                else:
+                    print(f"Unknown inst: {inst}")
+                    self.pc += 1
+            else:
+                break
+            
+
+
+comp = CPU()
+comp.load()
+comp.run()
