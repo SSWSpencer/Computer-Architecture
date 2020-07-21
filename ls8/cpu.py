@@ -14,23 +14,20 @@ class CPU:
     def load(self):
         """Load a program into memory."""
 
-        address = 0
-
-        # For now, we've just hardcoded a program:
-
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
-
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        try:
+            with open(f"{sys.argv[-1]}") as f:
+                address = 0
+                for line in f:
+                    try:
+                        line = line.split("#",1)[0]
+                        line = int(line, 2)
+                        self.ram[address] = line
+                        address+= 1
+                    except ValueError:
+                        pass
+        except FileNotFoundError:
+            print(f"Could not find file: {sys.argv[-1]}")
+            sys.exit(1)
 
 
     def alu(self, op, reg_a, reg_b):
@@ -76,6 +73,11 @@ class CPU:
             return f"Address out of range of ram"
         else:
             self.ram[address] = value
+    
+    def increment_pc(self, inst):
+        inst = inst & 0b11000000
+        inst = inst >> 6
+        return inst + 1
 
     def run(self):
         """Run the CPU."""
@@ -89,15 +91,23 @@ class CPU:
                     reg_num = self.ram[self.pc + 1]
                     value = self.ram[self.pc + 2]
                     self.reg[reg_num] = value
-                    self.pc += 3
                     #Original way (less clean): self.reg[self.ram[self.pc + 1]] = self.ram[self.pc+2]
-                elif inst == 0b01000111:
+                
+                elif inst == 0b01000111: #PRN
                     reg_val = self.ram[self.pc + 1]
                     print(self.reg[reg_val])
-                    self.pc += 2
+
+                elif inst == 0b10100010: # MULT
+                    reg1 = self.ram[self.pc + 1]
+                    reg2 = self.ram[self.pc + 2]
+                    val_1 = self.reg[reg1]
+                    val_2 = self.reg[reg2]
+                    prod = val_1 * val_2
+                    self.reg[reg1] = prod
                 else:
                     print(f"Unknown inst: {inst}")
-                    self.pc += 1
+                    
+                self.pc += self.increment_pc(inst)
             else:
                 break
             
