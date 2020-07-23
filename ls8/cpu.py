@@ -10,6 +10,8 @@ class CPU:
         self.pc = 0
         self.ram = [0] * 256
         self.reg = [0] * 8
+        self.SP = 7
+        self.reg[self.SP] = 0xf4
 
     def load(self):
         """Load a program into memory."""
@@ -86,33 +88,57 @@ class CPU:
             if self.pc < len(self.ram):
                 inst = self.ram[self.pc]
                 if inst == 0b00000001: # HLT
+                    print("HALT")
                     break
                 elif inst == 0b10000010: # LDI
+                    #print(f"executing ldi with {self.ram[self.pc + 1]}, {self.ram[self.pc + 2]}")
                     reg_num = self.ram[self.pc + 1]
                     value = self.ram[self.pc + 2]
                     self.reg[reg_num] = value
                     #Original way (less clean): self.reg[self.ram[self.pc + 1]] = self.ram[self.pc+2]
                 
                 elif inst == 0b01000111: #PRN
+                    #print(f"executing print")
                     reg_val = self.ram[self.pc + 1]
                     print(self.reg[reg_val])
 
                 elif inst == 0b10100010: # MULT
+                    #print(f"executing mult with {self.ram[self.pc + 1]}, {self.ram[self.pc + 2]}")
                     reg1 = self.ram[self.pc + 1]
                     reg2 = self.ram[self.pc + 2]
                     val_1 = self.reg[reg1]
                     val_2 = self.reg[reg2]
                     prod = val_1 * val_2
                     self.reg[reg1] = prod
+                
+                elif inst == 0b01000101: # PUSH
+                    self.reg[self.SP] -= 1
+
+                    # get register value
+                    reg_num = self.ram[self.pc + 1]
+                    value = self.reg[reg_num]
+
+                    # Store in memory
+                    push_address = self.reg[self.SP]
+                    self.ram[push_address] = value
+
+                elif inst == 0b01000110: # POP
+                    # Get the value
+                    pop_address = self.reg[self.SP]
+                    value = self.ram[pop_address]
+
+                    # Store in the given register
+                    reg_num = self.ram[self.pc + 1]
+                    self.reg[reg_num] = value
+
+                    # Increment SP
+                    self.reg[self.SP] += 1
+                
                 else:
                     print(f"Unknown inst: {inst}")
-                    
+
                 self.pc += self.increment_pc(inst)
             else:
                 break
             
 
-
-comp = CPU()
-comp.load()
-comp.run()
