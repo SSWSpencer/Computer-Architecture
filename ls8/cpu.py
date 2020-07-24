@@ -37,7 +37,17 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "DIV":
+            if self.reg[reg_b] != 0:
+                self.reg[reg_a] /= self.reg[reg_b]
+            else:
+                print("Error: Cannot divide by 0")
+                self.ram[self.pc + 1] = 0b00000001
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -77,63 +87,99 @@ class CPU:
             self.ram[address] = value
     
     def increment_pc(self, inst):
-        inst = inst & 0b11000000
-        inst = inst >> 6
-        return inst + 1
+        cInst = inst
+        cInst = cInst & 0b00010000
+        cInst = cInst >> 4
+        if cInst != 0b0001:
+            inst = inst & 0b11000000
+            inst = inst >> 6
+            return inst + 1
+        else:
+            return 0
 
     def run(self):
+        HLT = 0b00000001
+        LDI = 0b10000010 
+        PRN = 0b01000111
+        ALU = 0b001
+        MUL = 0b10100010
+        ADD = 0b10100000
+        DIV = 0b10100011
+        SUB = 0b10100000
+        PUSH = 0b01000101
+        POP = 0b01000110
+        CALL = 0b01010000
+        RET = 0b00010001
+
         """Run the CPU."""
         running = True
         while running:
             if self.pc < len(self.ram):
                 inst = self.ram[self.pc]
-                if inst == 0b00000001: # HLT
+
+                if inst == HLT: 
                     print("HALT")
                     break
-                elif inst == 0b10000010: # LDI
-                    #print(f"executing ldi with {self.ram[self.pc + 1]}, {self.ram[self.pc + 2]}")
+
+                elif inst == LDI:
                     reg_num = self.ram[self.pc + 1]
                     value = self.ram[self.pc + 2]
                     self.reg[reg_num] = value
                     #Original way (less clean): self.reg[self.ram[self.pc + 1]] = self.ram[self.pc+2]
                 
-                elif inst == 0b01000111: #PRN
-                    #print(f"executing print")
+                elif inst == PRN:
                     reg_val = self.ram[self.pc + 1]
                     print(self.reg[reg_val])
 
-                elif inst == 0b10100010: # MULT
-                    #print(f"executing mult with {self.ram[self.pc + 1]}, {self.ram[self.pc + 2]}")
+                elif ((inst & 0b00100000) >> 5) == ALU:
                     reg1 = self.ram[self.pc + 1]
                     reg2 = self.ram[self.pc + 2]
-                    val_1 = self.reg[reg1]
-                    val_2 = self.reg[reg2]
-                    prod = val_1 * val_2
-                    self.reg[reg1] = prod
+                    if inst == MUL:
+                        self.alu("MUL", reg1, reg2)
+                    elif inst == ADD:
+                        self.alu("ADD", reg1, reg2)
+                    elif inst == DIV: 
+                        self.alu("DIV", reg1, reg2)
+                    elif inst == SUB: # SUB
+                        self.alu("SUB", reg1, reg2)
                 
-                elif inst == 0b01000101: # PUSH
+                elif inst == PUSH:
                     self.reg[self.SP] -= 1
 
-                    # get register value
                     reg_num = self.ram[self.pc + 1]
                     value = self.reg[reg_num]
 
-                    # Store in memory
                     push_address = self.reg[self.SP]
                     self.ram[push_address] = value
 
-                elif inst == 0b01000110: # POP
-                    # Get the value
+                elif inst == POP: 
                     pop_address = self.reg[self.SP]
                     value = self.ram[pop_address]
 
-                    # Store in the given register
                     reg_num = self.ram[self.pc + 1]
                     self.reg[reg_num] = value
 
-                    # Increment SP
                     self.reg[self.SP] += 1
                 
+                elif inst == CALL: 
+                    ret_address = self.pc + 2
+
+                    self.reg[self.SP] -= 1
+                    address_to_push_to = self.reg[self.SP]
+                    self.ram[address_to_push_to] = ret_address
+
+                    reg_num = self.ram[self.pc+1]
+                    subroutine_address = self.reg[reg_num]
+
+                    self.pc = subroutine_address
+                
+                elif inst == RET:
+                    address_to_pop_from = self.reg[self.SP]
+                    ret_address = self.ram[address_to_pop_from]
+                    self.reg[self.SP] += 1
+
+                    self.pc = ret_address
+
                 else:
                     print(f"Unknown inst: {inst}")
 
