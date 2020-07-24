@@ -187,10 +187,10 @@ class CPU:
                         self.alu("ADD", reg1, reg2)
                     elif inst == DIV:
                         # print('executing div') 
-                        self.alu("executing DIV", reg1, reg2)
+                        self.alu("DIV", reg1, reg2)
                     elif inst == SUB: 
                         # print('executing sub')
-                        self.alu("executing SUB", reg1, reg2)
+                        self.alu("SUB", reg1, reg2)
                     elif inst == CMP:
                         # print('executing cmp')
                         self.alu("CMP", reg1, reg2)
